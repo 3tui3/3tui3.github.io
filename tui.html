@@ -1,0 +1,164 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页功能实现</title>
+</head>
+<body>
+<div>
+    <h3>功能实现页面</h3>
+    <!-- 姓名生成区域 -->
+    <div>
+        <label for="num">标签数量 (1-5):</label>
+        <input type="number" id="num" value="1" min="1" max="5" step="1" oninput="generateNames()">
+        <div id="names"></div>
+        <button onclick="generateNames()">重新生成姓名</button>
+        <!-- 姓名生成错误提示 -->
+        <div id="name-error"></div>
+    </div>
+    <!-- 水果选择区域 -->
+    <div>
+        <label>选择水果（至少选择一个）:</label>
+        <div>
+            <label><input type="checkbox" id="apple"> 选择苹果</label>
+            <label><input type="checkbox" id="grape"> 选择葡萄</label>
+            <label><input type="checkbox" id="watermelon"> 选择西瓜</label>
+            <label><input type="checkbox" id="banana"> 选择香蕉</label> <!-- 新增香蕉选项 -->
+        </div>
+
+        <!-- 新增备注区域 -->
+        <div>
+            <input type="text" id="wenzi-note" placeholder="选填">
+        </div>
+
+        <button onclick="submitSelection()">快速匿名提交</button>
+        <!-- 水果选择错误提示 -->
+        <div id="fruit-error"></div>
+    </div>
+</div>
+<script>
+    // 常用的姓氏
+    var lastNames = ["张", "李", "王", "赵", "孙", "周", "吴", "郑", "冯", "陈", "褚", "卫", "蒋", "沈", "韩", "杨", "朱", "秦", "尤", "许"];
+    // 常用的名字
+    var firstNames = ["伟", "芳", "娜", "敏", "静", "丽", "强", "磊"];
+
+    var generatedNames = [];  // 用来存储生成的姓名
+
+    // 页面加载时生成姓名
+    window.onload = function() {
+        generateNames(); // 初始加载时生成姓名
+    };
+
+    function generateNames() {
+        var num = document.getElementById('num').value;
+        var namesDiv = document.getElementById('names');
+        var nameErrorDiv = document.getElementById('name-error');
+
+        // 清除之前的错误提示
+        nameErrorDiv.innerHTML = "";
+
+        // 检查输入的数字是否有效
+        if (num < 1 || num > 5 || !Number.isInteger(Number(num))) {
+            nameErrorDiv.innerHTML = "请输入1到5之间的整数！";
+            namesDiv.innerHTML = "";  // 清空姓名显示
+            generatedNames = [];  // 清空生成的姓名
+            return;
+        }
+
+        // 随机生成指定数量的姓名
+        var selectedNames = [];
+        for (var i = 0; i < num; i++) {
+            var randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+            var randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+            selectedNames.push(randomLastName + randomFirstName);
+        }
+        generatedNames = selectedNames;  // 存储生成的姓名
+        namesDiv.innerHTML = "生成的姓名: " + selectedNames.join(", ");
+    }
+
+    function submitSelection() {
+        var num = document.getElementById('num').value;
+        var apple = document.getElementById('apple').checked;
+        var grape = document.getElementById('grape').checked;
+        var watermelon = document.getElementById('watermelon').checked;
+        var banana = document.getElementById('banana').checked;
+        var wenziNote = document.getElementById('wenzi-note').value;
+        var fruitErrorDiv = document.getElementById('fruit-error');
+        var nameErrorDiv = document.getElementById('name-error');
+
+        // 清除之前的错误提示
+        fruitErrorDiv.innerHTML = "";
+
+        // 如果人数不在1-5之间，不能提交
+        if (num < 1 || num > 5 || !Number.isInteger(Number(num))) {
+            nameErrorDiv.innerHTML = "人数必须是1到5之间的整数，无法提交！";
+            return;
+        }
+
+        // 检查至少选择一个水果
+        if (!apple && !grape && !watermelon && !banana) {
+            fruitErrorDiv.innerHTML = "请至少选择一个水果！";
+            return;
+        }
+
+        // 构建数据对象
+        var selectedFruits = [];
+        if (apple) selectedFruits.push("苹果");
+        if (grape) selectedFruits.push("葡萄");
+        if (watermelon) selectedFruits.push("西瓜");
+        if (banana) selectedFruits.push("香蕉"); // 添加香蕉到选择数组
+
+        var selectedFruitsStr = selectedFruits.join(", ");
+        var namesStr = generatedNames.join(", ");
+
+        // 弹出确认框，包含高度备注
+        var confirmMessage = "请确认您的选择：\n" +
+            "姓名数量：" + num + "\n" +
+            "生成的姓名：" + namesStr + "\n" +
+            "选择的水果：" + selectedFruitsStr;
+
+        // 如果有高度备注，则添加到确认信息中
+        if (wenziNote) {
+            confirmMessage += "\n备注：" + wenziNote;
+        }
+
+        confirmMessage += "\n是否提交？";
+
+        var isConfirmed = confirm(confirmMessage);
+
+        if (isConfirmed) {
+            // 数据构建
+            var data = {
+                num: num,
+                names: generatedNames,
+                fruits: selectedFruits,
+                wenziNote: wenziNote
+            };
+
+            // 发送数据到后台
+            sendDataToBackend(data);
+        } else {
+            console.log("提交已取消");
+        }
+    }
+
+    // 发送数据到后台的函数（使用 XMLHttpRequest）
+    function sendDataToBackend(data) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/your-backend-endpoint", true);
+        xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    alert("数据提交成功: " + xhr.responseText);
+                } else {
+                    alert("提交失败，请重试！");
+                }
+            }
+        };
+        xhr.send(JSON.stringify(data));
+    }
+</script>
+</body>
+</html>
